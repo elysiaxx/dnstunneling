@@ -1,31 +1,9 @@
-/**
- * Copyright (c) 2021 Tony BenBrahim
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
-#include "dns.h"
-#include <arpa/inet.h>
-#include <netinet/in.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <winsock.h>
+#include "dns.h"
 void extract_dns_query(unsigned char *dns_buffer,
                        struct dns_query *name_query) {
   unsigned char *query_ptr = dns_buffer + sizeof(struct dns_header);
@@ -47,59 +25,57 @@ void extract_dns_query(unsigned char *dns_buffer,
   name_query->qclass = ntohs(*qclass_ptr);
 }
 
-size_t prepare_response(struct dns_query *name_query, unsigned char *buffer,
-                        size_t num_received, uint32_t ttl, char *ip) {
-  struct dns_header *header = (struct dns_header *)buffer;
-  header->qr = 1;
-  header->aa = 0;
-  header->tc = 0;
-  header->ra = 0;
-  switch (name_query->type) {
-  case QTYPE_A:
-    header->rcode = RESPONSE_SUCCESS;
-    header->ancount = htons(1);
-    break;
-  case QTYPE_AAAA:
-    header->rcode = RESPONSE_SUCCESS;
-    header->ancount = 0;
-    break;
-  default:
-    header->rcode = RESPONSE_REFUSED;
-    header->ancount = 0;
-    break;
-  }
-  header->nscount = 0;
-  header->arcount = 0;
-  size_t response_length =
-      name_query->type == 1 ? num_received + 18 : num_received;
-  if (name_query->type == 1) {
-    struct dns_response_trailer *trailer =
-        (struct dns_response_trailer *)(buffer + num_received);
-    trailer->ans_type = 0xc0; // pointer
-    trailer->name_offset = 0x0c;
-    trailer->type = htons(QTYPE_A);
-    trailer->qclass = htons(QCLASS_INET);
-    trailer->ttl = htonl(ttl);
-    trailer->rdlength = htons(4);
-    inet_pton(AF_INET, ip, &trailer->rdata);
-  }
-  return response_length;
+struct dns_payload * get_respayload(struct dns_query * dns_query) {
+    uint8_t base32_buf[300] = {0};
+    for (int i = 0; i < dns_query->num_segments - 2; ++i) {
+        strncat((char *)base32_buf, dns_query->segment[i], 1024);
+    }
+    uint8_t payload_buf[300];
+    base32_decode(base32_buf, payload_buf, 300);
+    struct dns_payload *payload = (struct dns_payload *)payload_buf;
+    printf("Payload\n");
+    print_buffer(payload_buf, sizeof(struct dns_payload) - BLOCKSIZE);
+    printf("uuid %s, action %d, sequence %d, length %d\n", payload->uuid, payload->action, payload->sequence,
+            payload->length);
+    return payload;
 }
 
-void debug_header(struct dns_header *header) {
-  printf("id: %d\n", ntohs(header->id));
-  printf("qr: %d\n", header->qr);
-  printf("opcode: %d\n", header->opcode);
-  printf("tc: %d\n", header->tc);
-  printf("rd: %d\n", header->rd);
-  printf("qdcount: %d\n", ntohs(header->qdcount));
+void print_uuid(UUID *uuid) {
+  unsigned char *uTemp;
+  if(UuidToString(uuid,&uTemp)==RPC_S_OK){
+    printf("UUID : %s\n",uTemp);
+  }
+  else {
+    perror("Out of memory.\n");
+    exit(1);
+  }
 }
 
-void debug_name(struct dns_query *name_query) {
-  printf("Name query: ");
-  for (int i = 0; i < name_query->num_segments; ++i) {
-    printf("%s%s", name_query->segment[i],
-           i == name_query->num_segments - 1 ? " " : ".");
+void makeUUID(struct dns_payload *payload) 
+{
+  UUID *session_id = malloc(sizeof(UUID *));
+  if(UuidCreate(session_id) != RPC_S_OK)
+  {
+    perror("Create UUID fail.");
+    exit(1);
   }
-  printf("type %02x class %02x\n", name_query->type, name_query->qclass);
+  unsigned char *uTemp;
+  if(UuidToString(session_id,&uTemp)!=RPC_S_OK){
+    perror("Failed to convert uuid into string.");
+    exit(1);
+  }
+  print_uuid(session_id);
+  int j = 0;
+  for(int i = 0 ; i < strlen(uTemp);)
+  {
+    if( uTemp[i] == (unsigned char)'-')
+    {
+      i++;
+      continue;
+    }
+    char str[3] = { uTemp[i],uTemp[i+1], '\x0' };
+    payload->uuid[j]= (int)strtol(str, NULL, 16); 
+    j++;
+    i = i + 2;
+  }
 }

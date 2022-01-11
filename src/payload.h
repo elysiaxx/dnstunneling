@@ -1,43 +1,20 @@
-/**
- * Copyright (c) 2021 Tony BenBrahim
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
-
 #ifndef _PAYLOAD
 #define _PAYLOAD 1
 
 #include <stdint.h>
-#include <sys/types.h>
-#include <uuid/uuid.h>
+#include <rpc.h>
+#define PACK( __Declaration__ ) __pragma( pack(push, 1) ) __Declaration__ __pragma( pack(pop))
 
 #define BLOCKSIZE 120
+typedef unsigned char _uuid_dt[16];
 
-
-// action 1 is upload
-// action 2 is download
-struct __attribute__((__packed__)) dns_payload {
-  uuid_t uuid;
+PACK(struct dns_payload {
+  _uuid_dt uuid;
   uint8_t action;
   uint32_t sequence;
   uint8_t length;
   char data[BLOCKSIZE];
-};
+});
 
 #endif
+
