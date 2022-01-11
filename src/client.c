@@ -171,6 +171,7 @@ void send_request(unsigned char *name_prefix_buf, size_t name_prefix_size,
 void downloader(struct dns_payload *payload, int sockfd, struct sockaddr_in sockaddr){
     
     payload->action = 2;
+    payload->sequence = 0;
     payload->length = 0;
     unsigned char base32_data_buf[256];
     printf("payload:\n");
@@ -215,7 +216,7 @@ void downloader(struct dns_payload *payload, int sockfd, struct sockaddr_in sock
             base32_data_buf[num_written] = '\0';
             send_request(base32_data_buf,num_written,sockfd,sockaddr);
         }
-        if( res_payload->action == 0)
+        else if( res_payload->action == 0)
         {
             printf("action : 0\n");
             break;
