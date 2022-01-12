@@ -22,13 +22,15 @@ $(DIST):
 	mkdir $(DIST)
 
 DNS_SERVER_OBJECTS = $(ODIR)/server.o $(ODIR)/dns.o $(ODIR)/debug.o $(ODIR)/base32.o 
-DNS_CLIENT_OBJECTS = $(ODIR)/client.o $(ODIR)/dns.o $(ODIR)/base32.o  $(ODIR)/debug.o 
+DNS_SEND_OBJECTS = $(ODIR)/client.o $(ODIR)/base32.o  $(ODIR)/debug.o 
+
 
 $(DIST)/server: $(DNS_SERVER_OBJECTS)  $(DIST)
 	$(CC) $(DNS_SERVER_OBJECTS) $(CFLAGS)  $(LFLAGS) -o $@
 
-$(DIST)/client: $(DNS_CLIENT_OBJECTS)  $(DIST)
-	$(CC) $(DNS_CLIENT_OBJECTS) $(CFLAGS) $(LFLAGS) -o $@
+$(DIST)/client: $(DNS_SEND_OBJECTS)  $(DIST)
+	$(CC) $(DNS_SEND_OBJECTS) $(CFLAGS) $(LFLAGS) -o $@
+
 
 $(ODIR):
 	mkdir $(ODIR)
