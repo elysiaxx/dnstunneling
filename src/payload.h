@@ -29,8 +29,12 @@
 
 #define BLOCKSIZE 120
 
+
+// action 1 is upload
+// action 2 is download
 struct __attribute__((__packed__)) dns_payload {
   uuid_t uuid;
+  uint8_t action;
   uint32_t sequence;
   uint8_t length;
   char data[BLOCKSIZE];
